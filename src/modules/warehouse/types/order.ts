@@ -39,3 +39,36 @@ export interface OrderData {
   billingAddress: Address;
   summary: OrderSummary;
 }
+export type DashboardView = "overview" | "orders" | "kanban" | "analytics" | "settings";
+
+export interface WarehouseOrderItem {
+  id: string | number;
+  name: string;
+  price: number;
+  quantity: number;
+  image?: string;
+}
+
+export interface WarehouseOrder {
+  id: string;
+  orderId: string;
+  customer: string;
+  phone?: string;
+  status: OrderStatus;
+  total: number;
+  subtotal: number;
+  taxes: number;
+  shipping: number;
+  discount: number;
+  createdAt: string;
+  paymentMethod: "cod" | "online";
+paymentStatus: "paid" | "pending" | "failed";
+  priority?: string;
+  shippingMethod?: string;
+  courier?: string;
+  trackingNumber?: string;
+  shippingAddress: string;
+  coupon?: { code: string; discount: number };   // ← add this line
+  items: WarehouseOrderItem[];
+ 
+}
