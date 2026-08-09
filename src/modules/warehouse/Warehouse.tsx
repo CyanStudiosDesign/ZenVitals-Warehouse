@@ -40,7 +40,7 @@ export default function WarehouseDashboard() {
   const [commandQuery, setCommandQuery] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
-
+const [notificationsOpen, setNotificationsOpen] = useState(false);
   const fetchOrders = useCallback(async () => {
     setLoading(true);
     try {
@@ -104,10 +104,54 @@ export default function WarehouseDashboard() {
     [orders, commandQuery]
   );
 
+  const notifications = useMemo(() => {
+  const items: { id: string; title: string; description: string; order: WarehouseOrder }[] = [];
+
+  orders
+    .filter((o) => o.paymentMethod === "cod" && o.status === "pending")
+    .forEach((o) =>
+      items.push({
+        id: `cod-${o.id}`,
+        title: `${o.orderId} needs COD confirmation`,
+        description: o.customer,
+        order: o,
+      })
+    );
+
+  orders
+    .filter((o) => o.paymentStatus === "failed")
+    .forEach((o) =>
+      items.push({
+        id: `failed-${o.id}`,
+        title: `Payment failed on ${o.orderId}`,
+        description: o.customer,
+        order: o,
+      })
+    );
+
+  orders
+    .filter((o) => o.priority === "urgent" && o.status !== "delivered" && o.status !== "cancelled")
+    .forEach((o) =>
+      items.push({
+        id: `urgent-${o.id}`,
+        title: `${o.orderId} is marked urgent`,
+        description: o.customer,
+        order: o,
+      })
+    );
+
+  return items;
+}, [orders]);
+
   const openOrder = (order: WarehouseOrder) => {
     setSelectedOrder(order);
     setCommandOpen(false);
     setView("orders");
+  };
+
+  const goTo = (id: DashboardView) => {
+    setView(id);
+    setSelectedOrder(null);
   };
 
   const deleteOldCarts = async () => {
@@ -124,75 +168,114 @@ export default function WarehouseDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
+    <div className="min-h-screen bg-[#0E1211] text-white">
+     <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0E1211]/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-[1600px] items-center gap-4 px-4 lg:px-8">
-          <div className="mr-2 flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 font-black text-white">Z</span>
+          <div className="mr-2 flex shrink-0 items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0E1211] font-black text-[#C6FF3D]">Z</span>
             <div className="hidden sm:block">
               <p className="text-sm font-black leading-none">ZenVitals</p>
               <p className="mt-1 text-[10px] font-semibold uppercase tracking-widest text-slate-400">Warehouse</p>
             </div>
           </div>
-          <button
-            onClick={() => setCommandOpen(true)}
-            className="mx-auto flex w-full max-w-xl items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs text-slate-400 hover:border-blue-300"
-          >
-            <Search size={15} />
-            <span className="flex-1">Search orders or run a command</span>
-            <kbd className="rounded border bg-white px-1.5 py-0.5 text-[10px]">Ctrl K</kbd>
-          </button>
-          <button title="Notifications" className="relative rounded-xl border border-slate-200 p-2.5 text-slate-500 hover:text-blue-600">
-            <Bell size={17} />
-            <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-red-500" />
-          </button>
-        </div>
-      </header>
-      <div className="mx-auto flex max-w-[1600px]">
-        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-60 shrink-0 border-r border-slate-200 bg-white p-4 lg:block">
-          <nav className="space-y-1">
-            {navigation.map(([id, label, Icon]) => (
+
+          {/* Pill nav — replaces the old sidebar, drives the same `view` state */}
+        <nav className="hidden shrink-0 items-center gap-1 rounded-full border border-white/10 bg-white/[0.06] p-1 xl:flex">
+            {navigation.map(([id, label]) => (
               <button
                 key={id}
-                onClick={() => {
-                  setView(id);
-                  setSelectedOrder(null);
-                }}
-                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold ${view === id ? "bg-blue-50 text-blue-700" : "text-slate-600 hover:bg-slate-50"}`}
+                onClick={() => goTo(id)}
+                className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+                  view === id && !selectedOrder
+                    ? "bg-[#C6FF3D] text-[#0E1211]"
+                    : "text-white/60 hover:text-white"
+                }`}
               >
-                <Icon size={17} />
                 {label}
               </button>
             ))}
           </nav>
-          <div className="absolute bottom-4 left-4 right-4">
-            <button
-              onClick={deleteOldCarts}
-              disabled={deleting}
-              className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs font-bold text-red-700 hover:bg-red-100 disabled:opacity-50"
-            >
-              <Trash2 size={15} />
-              {deleting ? "Deleting..." : "Delete carts >30 days"}
-            </button>
-          </div>
-        </aside>
+
+          <button
+            onClick={() => setCommandOpen(true)}
+           className="flex w-full max-w-xl items-center gap-3 rounded-xl border border-white/10 bg-white/[0.04] px-3 py-2 text-left text-xs text-white/40 hover:border-[#C6FF3D]/40"
+          >
+            <Search size={15} />
+            <span className="flex-1">Search orders or run a command</span>
+            <kbd className="rounded border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] text-white/50">⌘K</kbd>
+          </button>
+          <div className="relative shrink-0">
+  <button
+    title="Notifications"
+    onClick={() => setNotificationsOpen((open) => !open)}
+    className="relative rounded-xl border border-slate-200 p-2.5 text-slate-500 hover:text-blue-600"
+  >
+    <Bell size={17} />
+    {notifications.length > 0 && (
+      <span className="absolute right-2 top-2 h-2 w-2 rounded-full border-2 border-white bg-red-500" />
+    )}
+  </button>
+
+  {notificationsOpen && (
+    <>
+      <div className="fixed inset-0 z-40" onClick={() => setNotificationsOpen(false)} />
+      <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+          <p className="text-sm font-bold text-slate-900">Notifications</p>
+          <span className="text-xs font-semibold text-slate-400">{notifications.length}</span>
+        </div>
+        <div className="max-h-80 overflow-auto">
+          {notifications.length ? (
+            notifications.map((n) => (
+              <button
+                key={n.id}
+                onClick={() => {
+                  openOrder(n.order);
+                  setNotificationsOpen(false);
+                }}
+                className="flex w-full flex-col items-start gap-0.5 border-b border-slate-50 px-4 py-3 text-left hover:bg-slate-50"
+              >
+                <span className="text-sm font-semibold text-slate-800">{n.title}</span>
+                <span className="text-xs text-slate-400">{n.description}</span>
+              </button>
+            ))
+          ) : (
+            <p className="p-6 text-center text-sm text-slate-400">You're all caught up.</p>
+          )}
+        </div>
+      </div>
+    </>
+  )}
+</div>
+        </div>
+
+        {/* Pill nav for tablet widths, where the row above gets tight */}
+        <div className="border-t border-slate-100 px-4 py-2 xl:hidden">
+         <nav className="hidden shrink-0 items-center gap-1 rounded-full border border-white/10 bg-white/[0.06] p-1 xl:flex">
+            {navigation.map(([id, label]) => (
+              <button
+                key={id}
+                onClick={() => goTo(id)}
+                className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+                  view === id && !selectedOrder
+                    ? "bg-[#C6FF3D] text-[#0E1211]"
+                    : "text-white/60 hover:text-white"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </nav>
+        </div>
+      </header>
+
+      <div className="mx-auto flex max-w-[1600px]">
         <main className="min-w-0 flex-1 p-4 lg:p-8">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-black tracking-tight text-slate-950">
-                {selectedOrder ? `Order ${selectedOrder.orderId}` : navigation.find(([id]) => id === view)?.[1]}
-              </h1>
-              <p className="mt-1 text-sm text-slate-500">Warehouse operations and ecommerce fulfillment</p>
-            </div>
-            <button
-              onClick={fetchOrders}
-              disabled={loading}
-              className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 shadow-sm"
-            >
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-              Refresh
-            </button>
-          </div>
+         <div className="mb-6 flex items-center justify-end">
+  <div className="flex items-center gap-2">
+    
+  </div>
+</div>
           {notice && (
             <div className="mb-5 flex items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-700">
               <span>{notice}</span>
@@ -204,8 +287,14 @@ export default function WarehouseDashboard() {
           {selectedOrder ? (
             <OrderDetails order={selectedOrder} onBack={() => setSelectedOrder(null)} onStatusChange={onStatusChange} />
           ) : view === "overview" ? (
-            <Overview orders={orders} />
-          ) : view === "orders" ? (
+  <Overview
+    orders={orders}
+    onRefresh={fetchOrders}
+    loading={loading}
+    onDeleteOldCarts={deleteOldCarts}
+    deleting={deleting}
+  />
+) : view === "orders" ? (
             <OrdersWorkspace orders={orders} onOpen={openOrder} onStatusChange={onStatusChange} />
           ) : view === "kanban" ? (
             <FulfillmentKanban orders={orders} onOpen={openOrder} onStatusChange={onStatusChange} />
@@ -216,14 +305,12 @@ export default function WarehouseDashboard() {
           )}
         </main>
       </div>
+
       <nav className="fixed bottom-0 left-0 right-0 z-30 flex justify-around border-t border-slate-200 bg-white p-2 lg:hidden">
         {navigation.slice(0, 4).map(([id, label, Icon]) => (
           <button
             key={id}
-            onClick={() => {
-              setView(id);
-              setSelectedOrder(null);
-            }}
+            onClick={() => goTo(id)}
             className={`flex flex-col items-center gap-1 rounded-lg px-4 py-1 text-[10px] font-bold ${view === id ? "text-blue-600" : "text-slate-400"}`}
           >
             <Icon size={18} />
@@ -231,6 +318,7 @@ export default function WarehouseDashboard() {
           </button>
         ))}
       </nav>
+
       {commandOpen && (
         <div className="fixed inset-0 z-50 bg-slate-950/30 p-4 backdrop-blur-sm" onMouseDown={() => setCommandOpen(false)}>
           <div
