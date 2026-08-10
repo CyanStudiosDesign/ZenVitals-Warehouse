@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import { ArrowLeft, Copy, MapPin, Package, Truck } from "lucide-react";
 import { FULFILLMENT_STATUSES, money, shortDate, STATUS_CLASS, STATUS_LABEL } from "../config";
-import type { OrderStatus, WarehouseOrder } from "../types";
+import { WarehouseOrder, OrderStatus } from "../types/order";
 
 export function OrderDetails({ order, onBack, onStatusChange }: { order: WarehouseOrder; onBack: () => void; onStatusChange: (id: string, status: OrderStatus) => Promise<void> | void }) {
   return <div className="mx-auto max-w-6xl space-y-5"><button onClick={onBack} className="flex items-center gap-2 text-sm font-bold text-slate-600 hover:text-blue-600"><ArrowLeft size={16} /> Back to orders</button>
